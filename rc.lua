@@ -11,10 +11,13 @@ local beautiful = require("beautiful")
 local naughty = require("naughty")
 local menubar = require("menubar")
 -- Audio control widget.
--- local APW = require("apw/widget")
+local APW = require("apw/widget")
+
+--require("xrandr")
 
 -- Load Debian menu entries
 require("debian.menu")
+
 
 -- Delightful widgets
 require('delightful.widgets.battery')
@@ -88,7 +91,9 @@ end
 -- }}}
 
 -- {{{ Variable definitions
+home = os.getenv("HOME")
 -- Themes define colours, icons, font and wallpapers.
+wallpapers = home .. "/wallpapers/"
 beautiful.init("/usr/share/awesome/themes/default/theme.lua")
 
 -- This is used later as the default terminal and editor to run.
@@ -96,9 +101,10 @@ terminal = "x-terminal-emulator"
 editor = os.getenv("EDITOR") or "editor"
 editor_cmd = terminal .. " -e " .. editor
 browser = "firefox"
-explorer = "nautilus"
+explorer = "nautilus --no-desktop"
 lockscreen = function() awful.util.spawn("slock") end
 
+-- {{{ Spawning processes
 -- Spawn process, if it is not already running
 local function run_once(cmd)
     -- we escape all '+' characters with '\'
@@ -143,6 +149,66 @@ else
     awful.util.spawn_with_shell(command)
 end
 end
+-- }}}
+
+
+-- {{{ Confirmation Popup
+
+function confirm_action(func, name)
+   mywibox[mouse.screen]:set_bg(beautiful.bg_urgent)
+   mywibox[mouse.screen]:set_fg(beautiful.fg_urgent)
+   awful.prompt.run({prompt = name .. " [y/N] "},
+      mypromptbox_conf[mouse.screen].widget,
+      function (t)
+         if string.lower(t) == 'y' then
+            func()
+         end
+      end,
+      nil, nil, 0,
+      function ()
+         mywibox[mouse.screen]:set_bg(beautiful.screen_highlight_bg_active)
+         mywibox[mouse.screen]:set_fg(beautiful.screen_highlight_fg_active)
+      end
+   )
+end
+-- }}}
+
+-- {{{ Random Wallpapers
+-- Get the list of files from a directory. Must be all images or folders and non-empty
+function scanDir(directory)
+    local i, fileList, popen = 0, {}, io.popen
+    for filename in popen([[find "]] ..directory.. [[" -type f]]):lines() do
+        i = i + 1
+        fileList[i] = filename
+    end
+    return fileList
+end
+wallpaperList = scanDir(wallpapers)
+
+-- Apply a random wallpaper on startup
+for s = 1, screen.count() do
+    gears.wallpaper.maximized(wallpaperList[math.random(1, #wallpaperList)], s, false)
+end
+
+-- Apply a random wallpaper every changeTime seconds
+changeTime = 120
+wallpaperTimer = timer { timeout = changeTime }
+wallpaperTimer:connect_signal("timeout", function()
+    for s = 1, screen.count() do
+        -- gears.wallpaper.maximized(wallpaperList[math.random(1, #wallpaperList)], s, true)
+        gears.wallpaper.maximized(wallpaperList[math.random(1, #wallpaperList)], s, false)
+    end
+    -- stop the timer (we don't need multiple instances running at the same time)
+    wallpaperTimer:stop()
+    -- restart the timer
+    wallpaperTimer.timeout = changeTime
+    wallpaperTimer:start()
+end)
+
+-- initial start when rc.lua is first run
+wallpaperTimer:start()
+-- }}}
+
 
 -- Default modkey.
 -- Usually, Mod4 is the key with a logo between Control and Alt.
@@ -170,11 +236,11 @@ local layouts =
 -- }}}
 
 -- {{{ Wallpaper
-if beautiful.wallpaper then
-    for s = 1, screen.count() do
-        gears.wallpaper.maximized(beautiful.wallpaper, s, true)
-    end
-end
+-- if beautiful.wallpaper then
+--    for s = 1, screen.count() do
+--        gears.wallpaper.maximized(beautiful.wallpaper, s, false)
+--    end
+-- end
 -- }}}
 
 -- {{{ Tags
@@ -186,19 +252,60 @@ for s = 1, screen.count() do
 end
 -- }}}
 
+
+-- {{ Shutdown menu
+
+-- Session management icons
+-- local icon_shutdown = myiconfinder:find("system-shutdown.png")
+-- local icon_restart = myiconfinder:find("system-reboot.png")
+-- local icon_logout = myiconfinder:find("system-log-out.png")
+-- local icon_lock = myiconfinder:find("system-lock-screen.png")
+
+-- Shutdown menu
+system_menuitems = {
+   { "shutdown",
+     function() confirm_action(
+           function()
+              awful.util.spawn('sudo /sbin/shutdown -h now')
+           end, "Shutdown")
+     end },
+   { "restart",
+     function() confirm_action(
+           function()
+              awful.util.spawn('sudo /sbin/shutdown -r now')
+           end, "Reboot")
+     end },
+   { "logout",
+     function() confirm_action(
+           function()
+              awesome.quit()
+           end, "Logout")
+     end },
+   { "lock",
+     function() confirm_action(
+           function()
+              awful.util.spawn("xscreensaver-command -lock")
+           end, "Lock")
+     end }
+}
+system_launcher = awful.widget.launcher({
+--      image = icon_shutdown,
+      menu = awful.menu({ items = system_menuitems}) })
+-- }}
+
 -- {{{ Menu
 -- Create a laucher widget and a main menu
 myawesomemenu = {
    { "Lock", lockscreen },
    { "manual", terminal .. " -e man awesome" },
    { "edit config", editor_cmd .. " " .. awesome.conffile },
-   { "restart", awesome.restart },
-   { "quit", awesome.quit }
+   { "restart", awesome.restart }
 }
 
 mymainmenu = awful.menu({ items = { { "awesome", myawesomemenu, beautiful.awesome_icon },
                                     { "Debian", debian.menu.Debian_menu.Debian },
-                                    { "open terminal", terminal }
+                                    { "open terminal", terminal },
+                                    { "System", system_menuitems }
                                   }
                         })
 
@@ -244,6 +351,8 @@ mytextclock = awful.widget.textclock()
 -- Create a wibox for each screen and add it
 mywibox = {}
 mypromptbox = {}
+mywibox_prompt = {}
+mypromptbox_conf = {}
 mylayoutbox = {}
 mytaglist = {}
 mytaglist.buttons = awful.util.table.join(
@@ -317,6 +426,14 @@ for s = 1, screen.count() do
     left_layout:add(mytaglist[s])
     left_layout:add(mypromptbox[s])
 
+    -- Create a confirmation promptbox for each screen
+    mypromptbox_conf[s] = awful.widget.prompt()
+    mywibox_prompt[s] = awful.wibox({ position = "bottom", screen = s,
+                                          font = "Consolas 18" })
+    mywibox_prompt[s].visible = false
+    mywibox_prompt[s]:set_widget(mypromptbox[s])
+    left_layout:add(mypromptbox_conf[s])
+
     -- Widgets that are aligned to the right
     local right_layout = wibox.layout.fixed.horizontal()
     -- if s == 1 then right_layout:add(wibox.widget.systray()) end
@@ -384,8 +501,14 @@ globalkeys = awful.util.table.join(
     awful.key({ modkey,           }, "Return", function () awful.util.spawn(terminal) end),
     awful.key({ modkey,           }, "b", function () awful.util.spawn(browser) end),
     awful.key({ modkey,           }, "e", function () awful.util.spawn(explorer) end),
+    awful.key({ modkey,           }, "a", function () awful.util.spawn("atom") end),
     awful.key({ modkey, "Control" }, "r", awesome.restart),
-    awful.key({ modkey, "Shift"   }, "q", awesome.quit),
+    -- awful.key({ modkey, "Shift"   }, "q", awesome.quit),
+    awful.key({ modkey, "Shift"   }, "q", function() confirm_action(
+               function()
+                  awesome.quit()
+               end, "Logout")
+         end),
 
     awful.key({ modkey,           }, "l",     function () awful.tag.incmwfact( 0.05)    end),
     awful.key({ modkey,           }, "h",     function () awful.tag.incmwfact(-0.05)    end),
@@ -420,15 +543,21 @@ globalkeys = awful.util.table.join(
     awful.key({ modkey, "Shift"   }, "F3",     function(c) awful.client.movetoscreen(c,3) end ),
 
     -- Volume Control
-    -- awful.key({}, "XF86AudioMute", APW.ToggleMute),
-    -- awful.key({}, "XF86AudioLowerVolume", APW.Down),
-    -- awful.key({}, "XF86AudioRaiseVolume", APW.Up),
+    awful.key({}, "XF86AudioMute", APW.ToggleMute),
+    awful.key({}, "XF86AudioLowerVolume", APW.Down),
+    awful.key({}, "XF86AudioRaiseVolume", APW.Up),
     
     -- Logout
     awful.key({ modkey, "Shift"   }, "q", function () awful.util.spawn("/usr/bin/gnome-session-quit  --logout --no-prompt") end),
 
     -- Menubar
-    awful.key({ modkey }, "p", function() menubar.show() end)
+    awful.key({ modkey }, "p", function() menubar.show() end),
+    
+    -- xrandr
+    -- awful.key({ modkey }, "XF86Display", xrandr)
+    -- awful.key({ modkey }, "F8", xrandr)
+    awful.key({ modkey }, "F8", function () awful.util.spawn("/usr/local/bin/my_xrandr_setup.sh") end),
+    awful.key({ modkey, "Shift" }, "F8", function () awful.util.spawn("/usr/local/bin/my_xrandr_setup.sh 1") end)
 )
 
 clientkeys = awful.util.table.join(
@@ -502,8 +631,13 @@ clientbuttons = awful.util.table.join(
     awful.button({ modkey }, 3, awful.mouse.client.resize))
 
 -- Set keys
+
+globalkeys = awful.util.table.join(globalkeys, xrandrkeys)
+
 root.keys(globalkeys)
 -- }}}
+
+naughty.notify({ title = "Screens: ", text = "n=" .. screen.count(), timeout = 3 })
 
 -- {{{ Rules
 -- Rules to apply to new clients (through the "manage" signal).
@@ -615,14 +749,17 @@ end)
 client.connect_signal("focus", function(c) c.border_color = beautiful.border_focus end)
 client.connect_signal("unfocus", function(c) c.border_color = beautiful.border_normal end)
 
--- Disable touchpad edge scrolling
+-- }}}
+
+-- {{{ Disable touchpad edge scrolling
 awful.util.spawn_with_shell("synclient VertEdgeScroll=0")
+-- }}}
 
 run_once("nm-applet")
 awful.util.spawn_with_shell('~/.config/awesome/locker.sh')
 
-run_once("skype")
+-- Launch startup apps
 
-spawn_to(browser .. " https://tessares.slack.com https://mail.google.com https://calendar.google.com/calendar https://jira.tessares.net/", "Firefox", tags[1][1], "class", true)
+run_once("skypeforlinux")
 
--- }}}
+spawn_to(browser .. " https://tessares.slack.com https://mail.google.com https://calendar.google.com/calendar https://jira.tessares.net/secure/RapidBoard.jspa?rapidView=18&view=detail", "Firefox", tags[1][1], "class", true)
