@@ -105,14 +105,17 @@ explorer = "nautilus --no-desktop"
 lockscreen = function() awful.util.spawn("slock") end
 
 -- {{{ Spawning processes
--- Spawn process, if it is not already running
-local function run_once(cmd)
+local function is_running(cmd)
     -- we escape all '+' characters with '\'
     local escaped_cmd = string.gsub(cmd, "+", "\\+")
     -- otherwise pgrep will not find the process
     local running = (os.execute("pgrep -fu $USER '" .. escaped_cmd .. "'") == 0)
+    return running
+end
 
-    if not running then
+-- Spawn process, if it is not already running
+local function run_once(cmd)
+    if not is_running(cmd) then
         naughty.notify({ title = "Starting: ", text = cmd, timeout = 3 })
         awful.util.spawn_with_shell(cmd)
     else
@@ -762,4 +765,6 @@ awful.util.spawn_with_shell('~/.config/awesome/locker.sh')
 
 run_once("skypeforlinux")
 
-spawn_to(browser .. " https://tessares.slack.com https://mail.google.com https://calendar.google.com/calendar https://jira.tessares.net/secure/RapidBoard.jspa?rapidView=18&view=detail", "Firefox", tags[1][1], "class", true)
+if (not is_running(browser)) then
+    spawn_to(browser .. " https://tessares.slack.com https://mail.google.com https://calendar.google.com/calendar https://jira.tessares.net/secure/RapidBoard.jspa?rapidView=18&view=detail", "Firefox", tags[1][1], "class", true)
+end
