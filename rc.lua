@@ -12,12 +12,8 @@ local naughty = require("naughty")
 local menubar = require("menubar")
 -- Audio control widget.
 local APW = require("apw/widget")
-
---require("xrandr")
-
 -- Load Debian menu entries
 require("debian.menu")
-
 
 -- Delightful widgets
 require('delightful.widgets.battery')
@@ -64,7 +60,6 @@ delightful_config = {
     },
 }
 
-
 -- {{{ Error handling
 -- Check if awesome encountered an error during startup and fell back to
 -- another config (This code will only ever execute for the fallback config)
@@ -103,6 +98,7 @@ editor_cmd = terminal .. " -e " .. editor
 browser = "firefox"
 explorer = "nautilus --no-desktop"
 lockscreen = function() awful.util.spawn("slock") end
+xrandr_switch_cmd = "sudo ~/.config/awesome/xrandr_switch.sh ~/.config/awesome/xrandr.configs "
 
 -- {{{ Spawning processes
 local function is_running(cmd)
@@ -198,7 +194,6 @@ changeTime = 120
 wallpaperTimer = timer { timeout = changeTime }
 wallpaperTimer:connect_signal("timeout", function()
     for s = 1, screen.count() do
-        -- gears.wallpaper.maximized(wallpaperList[math.random(1, #wallpaperList)], s, true)
         gears.wallpaper.maximized(wallpaperList[math.random(1, #wallpaperList)], s, false)
     end
     -- stop the timer (we don't need multiple instances running at the same time)
@@ -238,14 +233,6 @@ local layouts =
 }
 -- }}}
 
--- {{{ Wallpaper
--- if beautiful.wallpaper then
---    for s = 1, screen.count() do
---        gears.wallpaper.maximized(beautiful.wallpaper, s, false)
---    end
--- end
--- }}}
-
 -- {{{ Tags
 -- Define a tag table which hold all screen tags.
 tags = {}
@@ -259,37 +246,35 @@ end
 -- {{ Shutdown menu
 
 -- Session management icons
--- local icon_shutdown = myiconfinder:find("system-shutdown.png")
--- local icon_restart = myiconfinder:find("system-reboot.png")
--- local icon_logout = myiconfinder:find("system-log-out.png")
--- local icon_lock = myiconfinder:find("system-lock-screen.png")
+local icon_shutdown = "/usr/share/icons/Humanity/actions/16/system-shutdown.svg"
+local icon_restart = "/usr/share/icons/Humanity/actions/16/system-restart-panel.svg"
+local icon_logout = "/usr/share/icons/Humanity/actions/16/system-log-out.svg"
+local icon_lock = "/usr/share/icons/Humanity/actions/16/system-lock-screen.svg"
 
--- Shutdown menu
+-- System menu
 system_menuitems = {
-   { "shutdown",
+   { "Shutdown",
      function() confirm_action(
            function()
               awful.util.spawn('sudo /sbin/shutdown -h now')
            end, "Shutdown")
-     end },
-   { "restart",
+     end, icon_shutdown },
+   { "Restart",
      function() confirm_action(
            function()
               awful.util.spawn('sudo /sbin/shutdown -r now')
            end, "Reboot")
-     end },
-   { "logout",
+     end, icon_restart },
+   { "Logout",
      function() confirm_action(
            function()
               awesome.quit()
            end, "Logout")
-     end },
-   { "lock",
-     function() confirm_action(
-           function()
-              awful.util.spawn("xscreensaver-command -lock")
-           end, "Lock")
-     end }
+     end, icon_logout },
+   { "Lock",
+     function() 
+           lockscreen()
+     end, icon_lock }
 }
 system_launcher = awful.widget.launcher({
 --      image = icon_shutdown,
@@ -299,7 +284,7 @@ system_launcher = awful.widget.launcher({
 -- {{{ Menu
 -- Create a laucher widget and a main menu
 myawesomemenu = {
-   { "Lock", lockscreen },
+   { "Lock", lockscreen, icon_lock },
    { "manual", terminal .. " -e man awesome" },
    { "edit config", editor_cmd .. " " .. awesome.conffile },
    { "restart", awesome.restart }
@@ -341,15 +326,6 @@ kbdcfg.widget:buttons(
 -- }}}
 
 -- {{{ Wibox
--- Create a textclock widget
-mytextclock = awful.widget.textclock()
-
--- Audio Volume widget
--- volumewidget = wibox.widget.textbox()
--- volumewidget:set_text(" " .. pulseaudio.volumeInfo() .. " ")
--- volumetimer = timer({ timeout = 30 })
--- volumetimer:connect_signal("timeout", function() volumewidget.set_text(" " .. pulseaudio.volumeInfo() .. " ") end)
--- volumetimer:start()
 
 -- Create a wibox for each screen and add it
 mywibox = {}
@@ -439,15 +415,10 @@ for s = 1, screen.count() do
 
     -- Widgets that are aligned to the right
     local right_layout = wibox.layout.fixed.horizontal()
-    -- if s == 1 then right_layout:add(wibox.widget.systray()) end
     if s == 1 then
         right_layout:add(wibox.widget.systray())
         delightful.utils.fill_wibox_container(delightful_widgets, delightful_config, right_layout)
     end
-    -- right_layout:add(mytextclock)
-    -- right_layout:add(APW)
-    -- right_layout:add(volumewidget)
-    -- right_layout:add(kbdcfg.widget)
     right_layout:add(mylayoutbox[s])
 
     -- Now bring it all together (with the tasklist in the miRddle)
@@ -559,8 +530,8 @@ globalkeys = awful.util.table.join(
     -- xrandr
     -- awful.key({ modkey }, "XF86Display", xrandr)
     -- awful.key({ modkey }, "F8", xrandr)
-    awful.key({ modkey }, "F8", function () awful.util.spawn("/usr/local/bin/my_xrandr_setup.sh") end),
-    awful.key({ modkey, "Shift" }, "F8", function () awful.util.spawn("/usr/local/bin/my_xrandr_setup.sh 1") end)
+    awful.key({ modkey }, "F8", function () awful.util.spawn_with_shell(xrandr_switch_cmd) end),
+    awful.key({ modkey, "Shift" }, "F8", function () awful.util.spawn_with_shell(xrandr_switch_cmd .. " 1") end)
 )
 
 clientkeys = awful.util.table.join(
@@ -764,6 +735,10 @@ awful.util.spawn_with_shell('~/.config/awesome/locker.sh')
 -- Launch startup apps
 
 run_once("skypeforlinux")
+
+run_once("blueman-applet")
+
+-- run_once("thunderbird")
 
 if (not is_running(browser)) then
     spawn_to(browser .. " https://tessares.slack.com https://mail.google.com https://calendar.google.com/calendar https://jira.tessares.net/secure/RapidBoard.jspa?rapidView=18&view=detail", "Firefox", tags[1][1], "class", true)
