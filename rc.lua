@@ -184,6 +184,9 @@ function scanDir(directory)
 end
 wallpaperList = scanDir(wallpapers)
 
+-- Prevent wallpaper from Nautilus or other gnome stuff (Adrien!?)
+awful.util.spawn_with_shell("gsettings set org.gnome.desktop.background draw-background false")
+
 -- Apply a random wallpaper on startup
 for s = 1, screen.count() do
     gears.wallpaper.maximized(wallpaperList[math.random(1, #wallpaperList)], s, false)
@@ -272,7 +275,7 @@ system_menuitems = {
            end, "Logout")
      end, icon_logout },
    { "Lock",
-     function() 
+     function()
            lockscreen()
      end, icon_lock }
 }
@@ -520,17 +523,17 @@ globalkeys = awful.util.table.join(
     awful.key({}, "XF86AudioMute", APW.ToggleMute),
     awful.key({}, "XF86AudioLowerVolume", APW.Down),
     awful.key({}, "XF86AudioRaiseVolume", APW.Up),
-    
+
     -- Logout
     awful.key({ modkey, "Shift"   }, "q", function () awful.util.spawn("/usr/bin/gnome-session-quit  --logout --no-prompt") end),
 
     -- Menubar
     awful.key({ modkey }, "p", function() menubar.show() end),
-    
+
     -- xrandr
     -- awful.key({ modkey }, "XF86Display", xrandr)
     -- awful.key({ modkey }, "F8", xrandr)
-    awful.key({ modkey }, "F8", function () awful.util.spawn_with_shell(xrandr_switch_cmd) end),
+    awful.key({ modkey }, "F8", function () awful.util.spawn_with_shell(xrandr_switch_cmd .. " 2") end),
     awful.key({ modkey, "Shift" }, "F8", function () awful.util.spawn_with_shell(xrandr_switch_cmd .. " 1") end)
 )
 
@@ -612,6 +615,12 @@ root.keys(globalkeys)
 -- }}}
 
 naughty.notify({ title = "Screens: ", text = "n=" .. screen.count(), timeout = 3 })
+
+-- {{{
+-- for i = 1, #wallpaperList do
+--  naughty.notify({ title = "Wallpapers: ", text = "wp[1]=" .. wallpaperList[i], timeout = 30 })
+-- end
+-- }}}
 
 -- {{{ Rules
 -- Rules to apply to new clients (through the "manage" signal).
@@ -741,5 +750,5 @@ run_once("blueman-applet")
 -- run_once("thunderbird")
 
 if (not is_running(browser)) then
-    spawn_to(browser .. " https://tessares.slack.com https://mail.google.com https://calendar.google.com/calendar https://jira.tessares.net/secure/RapidBoard.jspa?rapidView=18&view=detail", "Firefox", tags[1][1], "class", true)
+    spawn_to(browser .. " https://chat.tessares.net/channel/dev-discuss https://mail.google.com https://calendar.google.com/calendar https://jira.tessares.net/secure/RapidBoard.jspa?rapidView=47", "Firefox", tags[1][1], "class", true)
 end

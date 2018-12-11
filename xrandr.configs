@@ -1,3 +1,5 @@
---output DP2 --auto --primary --output eDP1 --auto --same-as DP2 --output DP1 --auto --right-of DP2 
---output DP2 --auto --primary --output DP1 --auto --right-of DP2 --output eDP1 --off
---output HDMI1 --auto --primary --output eDP1 --auto --same-as HDMI1
+--output ${display[0]} --auto --primary --output ${display[1]} --auto --right-of ${display[0]}
+--output ${display[0]} --auto --primary --output ${display[1]} --auto --left-of ${display[0]}
+--output ${display[0]} --auto --primary --output ${display[1]} --auto --above ${display[0]}
+--output ${display[1]} --auto --primary --output ${display[0]} --auto --left-of ${display[1]}
+--output ${display[1]} --auto --primary --output ${display[0]} --auto --right-of ${display[1]}

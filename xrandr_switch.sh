@@ -4,6 +4,8 @@ CFG_LIST_FILE=$1
 ACTION=${2:-0}
 CURR_CFG_FILE=/var/run/xrandr_config
 
+display=( $(xrandr | grep " connected" | awk '{ print $1 }') )
+
 cfg_load()
 {
 	local tmp
@@ -45,7 +47,9 @@ fi
 
 echo $cfg > $CURR_CFG_FILE
 
-cmd=$(cfg_get $cfg)
+cfg_cmd=$(cfg_get $cfg)
+echo "$cfg: $cfg_cmd" >> /tmp/xr
+cmd=$(eval "echo ${cfg_cmd}")
 
 echo $cmd >> /tmp/xr
 xrandr $cmd
