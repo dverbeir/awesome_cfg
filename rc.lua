@@ -479,6 +479,7 @@ globalkeys = awful.util.table.join(
     awful.key({ modkey,           }, "b", function () awful.util.spawn(browser) end),
     awful.key({ modkey,           }, "e", function () awful.util.spawn(explorer) end),
     awful.key({ modkey,           }, "a", function () awful.util.spawn("atom") end),
+    awful.key({ modkey,           }, "c", function () awful.util.spawn_with_shell("export PATH=\"${HOME}/go/bin/:${PATH}\"; code") end),
     awful.key({ modkey, "Control" }, "r", awesome.restart),
     -- awful.key({ modkey, "Shift"   }, "q", awesome.quit),
     awful.key({ modkey, "Shift"   }, "q", function() confirm_action(
@@ -743,7 +744,7 @@ awful.util.spawn_with_shell('~/.config/awesome/locker.sh')
 
 -- Launch startup apps
 
-run_once("skypeforlinux")
+-- run_once("skypeforlinux")
 
 run_once("blueman-applet")
 
