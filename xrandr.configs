@@ -1,3 +1,4 @@
+--output ${display[0]} --auto --primary
 --output ${display[0]} --auto --primary --output ${display[1]} --auto --right-of ${display[0]}
 --output ${display[0]} --auto --primary --output ${display[1]} --auto --left-of ${display[0]}
 --output ${display[0]} --auto --primary --output ${display[1]} --auto --above ${display[0]}

@@ -1,10 +1,11 @@
 #!/bin/bash
 
-CFG_LIST_FILE=$1
-ACTION=${2:-0}
+CFG_LIST_FILE=${1:-/home/dverbeir/.config/awesome/xrandr.configs}
+ACTION=${2:-}
 CURR_CFG_FILE=/var/run/xrandr_config
 
 display=( $(xrandr | grep " connected" | awk '{ print $1 }') )
+#display=( $(xrandr --listactivemonitors | awk '/^\s[0-9]+:/{ print $4 }') )
 
 cfg_load()
 {
@@ -37,13 +38,17 @@ echo "ACTION=$ACTION CFG_LIST_FILE=$CFG_LIST_FILE NUM_CFG=$NUM_CFG" > /tmp/xr
 cfg=0
 [ -f $CURR_CFG_FILE ] && cfg=$(cat $CURR_CFG_FILE)
 
-if [ "x$ACTION" = "x0" ]; then
+case "x$ACTION" in
+x0)
   cfg=0
-elif [ "x$ACTION" = "x1" ]; then
+  ;;
+x1)
   [ $cfg -le 0 ] && cfg=$((NUM_CFG-1)) || cfg=$((cfg-1))
-else
+  ;;
+x2)
   [ $cfg -ge $((NUM_CFG-1)) ] && cfg=0 || cfg=$((cfg+1))
-fi
+  ;;
+esac
 
 echo $cfg > $CURR_CFG_FILE
 
